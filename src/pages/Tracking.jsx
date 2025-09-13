@@ -1,4 +1,3 @@
-// src/pages/Tracking.jsx
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Package, Plane, Ship, Truck, Bike, CheckCircle } from "lucide-react";
@@ -40,23 +39,18 @@ const getIndiaNow = () => {
 
 // --- Progress Calculator ---
 const calculateProgress = (shipment) => {
-  if (!shipment) return { steps: [], percent: 0 };
+  if (!shipment) return { steps: [], percent: 0, durationDays: 0 };
 
   const start = new Date(shipment.startDate);
-  const totalDuration = shipment.durationMinutes || (shipment.mode === "air" ? 1440 : 20 * 1440); // fallback
-
+  const totalDuration = shipment.durationMinutes || (shipment.mode === "air" ? 1440 : 20 * 1440);
   const now = getIndiaNow();
 
-  // ensure progress is between 0% and 100%
   const elapsedMinutes = Math.max(0, Math.min(totalDuration, Math.floor((now - start) / (1000 * 60))));
 
   const timeline = shipment.routeTimeline[shipment.mode];
   const totalSteps = timeline.length;
 
-  // smooth percent
   const percent = (elapsedMinutes / totalDuration) * 100;
-
-  // steps completed based on proportion of total duration
   const stepsCompleted = Math.min(
     totalSteps,
     Math.floor((elapsedMinutes / totalDuration) * totalSteps) + 1
@@ -69,10 +63,18 @@ const calculateProgress = (shipment) => {
   };
 };
 
+// --- Loading Spinner Component ---
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-32">
+    <div className="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+  </div>
+);
+
 export default function Tracking() {
   const [trackingId, setTrackingId] = useState("");
   const [shipment, setShipment] = useState(null);
   const [progress, setProgress] = useState({ steps: [], percent: 0, durationDays: 0 });
+  const [loading, setLoading] = useState(false);
 
   const handleTrack = () => {
     const found = shipmentsDB[trackingId];
@@ -82,11 +84,15 @@ export default function Tracking() {
       return;
     }
 
-    setShipment(found);
-    setProgress(calculateProgress(found));
+    // Show spinner for 2 seconds
+    setLoading(true);
+    setTimeout(() => {
+      setShipment(found);
+      setProgress(calculateProgress(found));
+      setLoading(false);
+    }, 2000);
   };
 
-  // Auto-update progress smoothly
   useEffect(() => {
     if (!shipment) return;
     const interval = setInterval(() => {
@@ -99,7 +105,7 @@ export default function Tracking() {
     <section
       className="relative min-h-screen flex items-center justify-center px-6 pt-28 pb-12"
       style={{
-        backgroundImage: `url(${import.meta.env.BASE_URL}/cargo.jpg)`,
+        backgroundImage: `url("${import.meta.env.BASE_URL}cargo.jpg")`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -127,78 +133,100 @@ export default function Tracking() {
           </button>
         </div>
 
-        {shipment && (
-          <div className="mb-8 text-white">
-            <h3 className="text-xl font-semibold mb-2">Shipment Details</h3>
-            <p>
-              <span className="font-bold">Mode:</span> {shipment.mode.toUpperCase()}
-            </p>
-            <p>
-              <span className="font-bold">Start Date:</span>{" "}
-              {new Date(shipment.startDate).toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata" })}
-            </p>
-            <p>
-              <span className="font-bold">Duration:</span> {progress.durationDays} {progress.durationDays === 1 ? "day" : "days"}
-            </p>
-            <p>
-              <span className="font-bold">Package:</span> {shipment.packageDetails.join(", ")}
-            </p>
-          </div>
-        )}
+        {/* Show spinner when loading */}
+        {loading && <LoadingSpinner />}
 
-        {progress.steps.length > 0 && (
-          <motion.div className="relative flex flex-col gap-8 mb-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-            {progress.steps.map((s, i) => {
-              const Icon = statusIcons[s] || Package;
-              const isDelivered = s.includes("Delivered") || s === "Delivered";
-              const isCurrent = i === progress.steps.length - 1 && !isDelivered;
-              const isCompleted = i < progress.steps.length - 1;
+        {!loading && shipment && (
+          <>
+            {/* Shipment Details */}
+            <div className="mb-6 text-white">
+              <h3 className="text-xl font-semibold mb-2">Shipment Details</h3>
+              <p>
+                <span className="font-bold">Mode:</span> {shipment.mode.toUpperCase()}
+              </p>
+              <p>
+                <span className="font-bold">Start Date:</span>{" "}
+                {new Date(shipment.startDate).toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata" })}
+              </p>
+              <p>
+                <span className="font-bold">Duration:</span> {progress.durationDays} {progress.durationDays === 1 ? "day" : "days"}
+              </p>
+              <p>
+                <span className="font-bold">Package:</span> {shipment.packageDetails.join(", ")}
+              </p>
 
-              return (
-                <motion.div key={i} className="flex items-center gap-4" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.3 }}>
-                  <div className="relative flex flex-col items-center">
-                    <div
-                      className={`w-10 h-10 flex items-center justify-center rounded-full border-2 ${
-                        isDelivered
-                          ? "bg-green-600 border-green-600 text-white"
-                          : isCurrent
-                          ? "bg-blue-700 border-blue-700 text-white"
-                          : isCompleted
-                          ? "bg-blue-100 border-blue-600 text-blue-600"
-                          : "bg-gray-200 border-gray-400 text-gray-600"
-                      }`}
-                    >
-                      <Icon size={20} />
-                    </div>
-                    {i < progress.steps.length - 1 && <div className={`h-10 w-1 ${isDelivered || isCompleted ? "bg-blue-600" : "bg-gray-300"}`}></div>}
+              {/* Horizontal Scroll Carousel for Images */}
+              {shipment.images?.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-xl font-semibold mb-2 text-white">Package Images</h3>
+                  <div className="flex overflow-x-auto gap-4 pb-2">
+                    {shipment.images.map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img}
+                        alt={`Package image ${idx + 1}`}
+                        className="rounded-lg shadow-lg h-40 min-w-[150px] object-cover flex-shrink-0"
+                      />
+                    ))}
                   </div>
-                  <p className={`font-medium text-lg ${isDelivered ? "text-green-600" : "text-white"}`}>{s}</p>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
+                </div>
+              )}
+            </div>
 
-        {shipment && (
-          <div className="w-full relative bg-gray-300/40 rounded-full h-4 overflow-hidden">
-            <div className="bg-blue-600 h-4 rounded-full transition-all duration-500" style={{ width: `${progress.percent}%` }}></div>
-
-            {/* Moving icon */}
-            {progress.percent < 100 && (
+            {/* Progress Steps and Bar */}
+            {progress.steps.length > 0 && (
               <>
-                {shipment.mode === "air" && (
-                  <Plane className="absolute top-1/2 -translate-y-1/2 text-white transition-all duration-10000 ease-linear" style={{ left: `calc(${progress.percent}% - 10px)` }} size={22} />
-                )}
-                {shipment.mode === "sea" && (
-                  <Ship className="absolute top-1/2 -translate-y-1/2 text-white transition-all duration-10000 ease-linear" style={{ left: `calc(${progress.percent}% - 12px)` }} size={24} />
-                )}
+                <motion.div className="relative flex flex-col gap-8 mb-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+                  {progress.steps.map((s, i) => {
+                    const Icon = statusIcons[s] || Package;
+                    const isDelivered = s.includes("Delivered") || s === "Delivered";
+                    const isCurrent = i === progress.steps.length - 1 && !isDelivered;
+                    const isCompleted = i < progress.steps.length - 1;
+
+                    return (
+                      <motion.div key={i} className="flex items-center gap-4" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.3 }}>
+                        <div className="relative flex flex-col items-center">
+                          <div
+                            className={`w-10 h-10 flex items-center justify-center rounded-full border-2 ${isDelivered
+                              ? "bg-green-600 border-green-600 text-white"
+                              : isCurrent
+                                ? "bg-blue-700 border-blue-700 text-white"
+                                : isCompleted
+                                  ? "bg-blue-100 border-blue-600 text-blue-600"
+                                  : "bg-gray-200 border-gray-400 text-gray-600"
+                              }`}
+                          >
+                            <Icon size={20} />
+                          </div>
+                          {i < progress.steps.length - 1 && <div className={`h-10 w-1 ${isDelivered || isCompleted ? "bg-blue-600" : "bg-gray-300"}`}></div>}
+                        </div>
+                        <p className={`font-medium text-lg ${isDelivered ? "text-green-600" : "text-white"}`}>{s}</p>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+
+                <div className="w-full relative bg-gray-300/40 rounded-full h-4 overflow-hidden">
+                  <div className="bg-blue-600 h-4 rounded-full transition-all duration-500" style={{ width: `${progress.percent}%` }}></div>
+
+                  {progress.percent < 100 && (
+                    <>
+                      {shipment.mode === "air" && (
+                        <Plane className="absolute top-1/2 -translate-y-1/2 text-white transition-all duration-10000 ease-linear" style={{ left: `calc(${progress.percent}% - 10px)` }} size={22} />
+                      )}
+                      {shipment.mode === "sea" && (
+                        <Ship className="absolute top-1/2 -translate-y-1/2 text-white transition-all duration-10000 ease-linear" style={{ left: `calc(${progress.percent}% - 12px)` }} size={24} />
+                      )}
+                    </>
+                  )}
+
+                  <p className="text-center text-white mt-2 font-semibold">
+                    {progress.percent < 100 ? `${progress.percent.toFixed(1)}% In Progress` : "Delivered ✅"}
+                  </p>
+                </div>
               </>
             )}
-
-            <p className="text-center text-white mt-2 font-semibold">
-              {progress.percent < 100 ? `${progress.percent.toFixed(1)}% In Progress` : "Delivered ✅"}
-            </p>
-          </div>
+          </>
         )}
       </div>
     </section>

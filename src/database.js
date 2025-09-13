@@ -8,17 +8,23 @@ export const shipmentsDB = {
   KE628IND: {
     mode: "air",
     startDate: fixedStartDate,
-    durationMinutes: 1440, // 1 day in minutes → Delivered on 15th Sept
+    durationMinutes: 1440, // 1 day
     packageDetails: [
       "Access Card",
       "Personalized Love Letter",
       "Cartier Jewelry",
-      "Dior Perfume & Skincare",
+      "Jo Malone Perfume & Skincare",
       "Customized Keepsake",
       "Ulwi Pashmina Shawl",
       "Queen Baton (Torch)",
       "Gold",
       "$10,000.",
+    ],
+    images: [
+      "/images/drugs.jpg",
+      "/images/money.jpg",
+      "/images/perfume.jpg",
+      "/images/rings.jpg",
     ],
     routeTimeline: {
       air: [
@@ -30,7 +36,6 @@ export const shipmentsDB = {
       ],
     },
   },
-
   AIR2IND54321: {
     mode: "air",
     startDate: fixedStartDate,
