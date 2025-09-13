@@ -84,7 +84,6 @@ export default function Tracking() {
       return;
     }
 
-    // Show spinner for 2 seconds
     setLoading(true);
     setTimeout(() => {
       setShipment(found);
@@ -155,11 +154,11 @@ export default function Tracking() {
                 <span className="font-bold">Package:</span> {shipment.packageDetails.join(", ")}
               </p>
 
-              {/* Horizontal Scroll Carousel for Images */}
+              {/* Horizontal Scroll Carousel for Images (scrollbar hidden) */}
               {shipment.images?.length > 0 && (
                 <div className="mt-4">
                   <h3 className="text-xl font-semibold mb-2 text-white">Package Images</h3>
-                  <div className="flex overflow-x-auto gap-4 pb-2">
+                  <div className="flex gap-4 pb-2 overflow-x-auto hide-scrollbar">
                     {shipment.images.map((img, idx) => (
                       <img
                         key={idx}
